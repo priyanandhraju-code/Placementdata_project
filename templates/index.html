@@ -1,96 +1,1229 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Placement Prediction Project</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Placement Prediction Project</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
 <header class="topbar">
     <h1>Placement Prediction Project</h1>
 </header>
 
+
 <div class="layout">
-    <!-- Left panel -->
+
+    <!-- ================================================= -->
+    <!-- SIDEBAR -->
+    <!-- ================================================= -->
+
     <nav class="sidebar">
+
         <ul>
+
             <li>
                 <a href="{{ url_for('data_loading') }}"
                    class="menu-item {% if active == 'data-loading' %}active{% endif %}">
                     Data Loading
                 </a>
             </li>
-            <li class="menu-item disabled">Preprocessing (coming soon)</li>
-            <li class="menu-item disabled">Model Training (coming soon)</li>
-            <li class="menu-item disabled">Prediction (coming soon)</li>
+
+
+            <li>
+                <a href="{{ url_for('eda_page') }}"
+                   class="menu-item {% if active == 'eda' %}active{% endif %}">
+                    EDA
+                </a>
+            </li>
+
+
+            <li>
+                <a href="{{ url_for('preprocessing_page') }}"
+                   class="menu-item {% if active == 'preprocessing' %}active{% endif %}">
+                    Preprocessing
+                </a>
+            </li>
+
+
+            <li>
+                <span class="menu-item disabled">
+                    Model Training
+                    <br>
+                    (coming soon)
+                </span>
+            </li>
+
+
+            <li>
+                <span class="menu-item disabled">
+                    Prediction
+                    <br>
+                    (coming soon)
+                </span>
+            </li>
+
         </ul>
+
     </nav>
 
-    <!-- Main content -->
+
+    <!-- ================================================= -->
+    <!-- MAIN CONTENT -->
+    <!-- ================================================= -->
+
     <main class="content">
 
+
+        <!-- ================================================= -->
+        <!-- HOME -->
+        <!-- ================================================= -->
+
         {% if active == 'none' %}
-            <p>Select an option from the left panel to get started.</p>
+
+        <h2>Placement Prediction Project</h2>
+
+        <p>
+            Select an option from the left panel to get started.
+        </p>
+
+
+        <div class="process-card">
+
+            <h3>Machine Learning Workflow</h3>
+
+            <div class="workflow">
+
+                <div class="workflow-step">
+                    <span class="workflow-number">1</span>
+                    Data Loading
+                </div>
+
+                <div class="workflow-step">
+                    <span class="workflow-number">2</span>
+                    Exploratory Data Analysis
+                </div>
+
+                <div class="workflow-step">
+                    <span class="workflow-number">3</span>
+                    Data Preprocessing
+                </div>
+
+                <div class="workflow-step disabled-step">
+                    <span class="workflow-number">4</span>
+                    Model Training
+                </div>
+
+                <div class="workflow-step disabled-step">
+                    <span class="workflow-number">5</span>
+                    Prediction
+                </div>
+
+            </div>
+
+        </div>
+
         {% endif %}
+
+
+
+        <!-- ================================================= -->
+        <!-- DATA LOADING -->
+        <!-- ================================================= -->
 
         {% if active == 'data-loading' %}
-            <h2>Data Loading</h2>
 
-            {% if error %}
-                <div class="error">{{ error }}</div>
-            {% endif %}
+        <h2>Data Loading</h2>
 
-            {% if summary %}
-                <table class="summary-table">
-                    <tr><td>Rows</td><td>{{ summary.n_rows }}</td></tr>
-                    <tr><td>Columns</td><td>{{ summary.n_cols }}</td></tr>
-                </table>
+        <p>
+            Load the placement dataset and inspect its basic structure.
+        </p>
 
-                <h3>Column Info</h3>
-                <div class="table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                            <tr><th>Column</th><th>Dtype</th><th>Missing Values</th></tr>
-                        </thead>
-                        <tbody>
-                        {% for col in summary.columns %}
-                            <tr>
-                                <td>{{ col }}</td>
-                                <td>{{ summary.dtypes[col] }}</td>
-                                <td>{{ summary.missing_counts[col] }}</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
 
-                <h3>Preview (first 10 rows)</h3>
-                <div class="table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                            {% for col in summary.columns %}
-                                <th>{{ col }}</th>
-                            {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for row in summary.preview %}
-                            <tr>
-                            {% for col in summary.columns %}
-                                <td>{{ row[col] }}</td>
-                            {% endfor %}
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
+        {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
         {% endif %}
 
+
+        {% if summary %}
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+                <h3>Rows</h3>
+                <p>{{ summary.n_rows }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Columns</h3>
+                <p>{{ summary.n_cols }}</p>
+            </div>
+
+        </div>
+
+
+        <div class="process-card">
+
+            <h3>Column Information</h3>
+
+            <div class="table-wrapper">
+
+                <table class="data-table">
+
+                    <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Data Type</th>
+                        <th>Missing Values</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for col in summary.columns %}
+
+                    <tr>
+                        <td>{{ col }}</td>
+                        <td>{{ summary.dtypes[col] }}</td>
+                        <td>{{ summary.missing_counts[col] }}</td>
+                    </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+        <div class="process-card">
+
+            <h3>Dataset Preview</h3>
+
+            <p>First 10 rows of the dataset.</p>
+
+            <div class="table-wrapper">
+
+                <table class="data-table">
+
+                    <thead>
+                    <tr>
+
+                        {% for col in summary.columns %}
+                        <th>{{ col }}</th>
+                        {% endfor %}
+
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for row in summary.preview %}
+
+                    <tr>
+
+                        {% for col in summary.columns %}
+                        <td>{{ row[col] }}</td>
+                        {% endfor %}
+
+                    </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+        {% endif %}
+
+
+
+        <!-- ================================================= -->
+        <!-- EDA -->
+        <!-- ================================================= -->
+
+        {% if active == 'eda' %}
+
+        <h2>Exploratory Data Analysis</h2>
+
+        <p>
+            Explore the structure, distributions, relationships
+            and patterns in the placement dataset.
+        </p>
+
+
+        {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+        {% endif %}
+
+
+        {% if results %}
+
+
+        <!-- BASIC SUMMARY -->
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+                <h3>Rows</h3>
+                <p>{{ results.rows }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Columns</h3>
+                <p>{{ results.columns_count }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Duplicate Rows</h3>
+                <p>{{ results.duplicates }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Numeric Features</h3>
+                <p>{{ results.numeric_columns|length }}</p>
+            </div>
+
+        </div>
+
+
+
+        <!-- MISSING VALUES -->
+
+        <div class="process-card">
+
+            <h3>Missing Value Analysis</h3>
+
+
+            {% if results.missing_values %}
+
+            <div class="table-wrapper">
+
+                <table class="data-table">
+
+                    <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Missing Count</th>
+                        <th>Missing %</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for item in results.missing_values %}
+
+                    <tr>
+                        <td>{{ item.column }}</td>
+                        <td>{{ item.missing_count }}</td>
+                        <td>{{ "%.2f"|format(item.missing_pct) }}%</td>
+                    </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% else %}
+
+            <p class="success-message">
+                No missing values were found.
+            </p>
+
+            {% endif %}
+
+
+            {% if results.missing_plot %}
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.missing_plot }}"
+                    alt="Missing Values by Column"
+                    class="eda-chart"
+                >
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+
+
+        <!-- PLACEMENT STATUS -->
+
+        <div class="process-card">
+
+            <h3>Placement Status Distribution</h3>
+
+
+            <table class="data-table">
+
+                <thead>
+                <tr>
+                    <th>Placement Status</th>
+                    <th>Number of Students</th>
+                </tr>
+                </thead>
+
+                <tbody>
+
+                {% for status, count in results.placement_status.items() %}
+
+                <tr>
+                    <td>{{ status }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+
+            {% if results.placement_plot %}
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.placement_plot }}"
+                    alt="Placement Status Distribution"
+                    class="eda-chart"
+                >
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+
+
+        <!-- NUMERIC DISTRIBUTIONS -->
+
+        {% if results.distribution_plot %}
+
+        <div class="process-card">
+
+            <h3>Numeric Feature Distributions</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.distribution_plot }}"
+                    alt="Numeric Feature Distributions"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- CGPA -->
+
+        {% if results.cgpa_plot %}
+
+        <div class="process-card">
+
+            <h3>CGPA Distribution</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.cgpa_plot }}"
+                    alt="CGPA Distribution"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- DESCRIPTIVE STATISTICS -->
+
+        {% if results.statistics %}
+
+        <div class="process-card">
+
+            <h3>Descriptive Statistics</h3>
+
+            <div class="table-wrapper">
+
+                <table class="data-table">
+
+                    <thead>
+
+                    <tr>
+                        <th>Feature</th>
+                        <th>Count</th>
+                        <th>Mean</th>
+                        <th>Std</th>
+                        <th>Min</th>
+                        <th>25%</th>
+                        <th>50%</th>
+                        <th>75%</th>
+                        <th>Max</th>
+                    </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                    {% for column, stats in results.statistics.items() %}
+
+                    <tr>
+
+                        <td>{{ column }}</td>
+                        <td>{{ stats.get('count', '') }}</td>
+                        <td>{{ stats.get('mean', '') }}</td>
+                        <td>{{ stats.get('std', '') }}</td>
+                        <td>{{ stats.get('min', '') }}</td>
+                        <td>{{ stats.get('25%', '') }}</td>
+                        <td>{{ stats.get('50%', '') }}</td>
+                        <td>{{ stats.get('75%', '') }}</td>
+                        <td>{{ stats.get('max', '') }}</td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- CORRELATION -->
+
+        {% if results.correlation_plot %}
+
+        <div class="process-card">
+
+            <h3>Correlation Analysis</h3>
+
+            <p>
+                Correlation between numerical features.
+            </p>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.correlation_plot }}"
+                    alt="Correlation Heatmap"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- RELATIONSHIP PLOTS -->
+
+        {% if results.relationship_plots %}
+
+        <div class="process-card">
+
+            <h3>Feature Relationships</h3>
+
+            <div class="chart-grid">
+
+                {% for plot in results.relationship_plots %}
+
+                <div class="chart-card">
+
+                    <h4>{{ plot.title }}</h4>
+
+                    <img
+                        src="{{ plot.image }}"
+                        alt="{{ plot.title }}"
+                    >
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- CATEGORICAL PLOTS -->
+
+        {% if results.categorical_plots %}
+
+        <div class="process-card">
+
+            <h3>Categorical Feature Analysis</h3>
+
+            <div class="chart-grid">
+
+                {% for plot in results.categorical_plots %}
+
+                <div class="chart-card">
+
+                    <h4>{{ plot.column }}</h4>
+
+                    <img
+                        src="{{ plot.image }}"
+                        alt="{{ plot.column }} Distribution"
+                    >
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- GENDER -->
+
+        {% if results.gender_placement_plot %}
+
+        <div class="process-card">
+
+            <h3>Gender vs Placement Status</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.gender_placement_plot }}"
+                    alt="Gender vs Placement Status"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- COLLEGE TIER -->
+
+        {% if results.college_tier_plot %}
+
+        <div class="process-card">
+
+            <h3>College Tier vs Placement Status</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.college_tier_plot }}"
+                    alt="College Tier vs Placement Status"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- STREAM -->
+
+        {% if results.stream_placement_plot %}
+
+        <div class="process-card">
+
+            <h3>Stream vs Placement Status</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.stream_placement_plot }}"
+                    alt="Stream vs Placement Status"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- SGPA -->
+
+        {% if results.sgpa_plot %}
+
+        <div class="process-card">
+
+            <h3>Average SGPA Across Semesters</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.sgpa_plot }}"
+                    alt="SGPA Trend"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- SALARY -->
+
+        {% if results.salary_plot %}
+
+        <div class="process-card">
+
+            <h3>Salary Distribution - Placed Students</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.salary_plot }}"
+                    alt="Salary Distribution"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- SALARY BY COLLEGE -->
+
+        {% if results.salary_college_plot %}
+
+        <div class="process-card">
+
+            <h3>Salary Package by College Tier</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.salary_college_plot }}"
+                    alt="Salary Package by College Tier"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- BOX PLOTS -->
+
+        {% if results.boxplots %}
+
+        <div class="process-card">
+
+            <h3>Outlier Detection</h3>
+
+            <div class="chart-grid">
+
+                {% for plot in results.boxplots %}
+
+                <div class="chart-card">
+
+                    <h4>{{ plot.column }}</h4>
+
+                    <img
+                        src="{{ plot.image }}"
+                        alt="Box Plot for {{ plot.column }}"
+                    >
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- PAIRPLOT -->
+
+        {% if results.pairplot %}
+
+        <div class="process-card">
+
+            <h3>Feature Pairplot</h3>
+
+            <div class="chart-container">
+
+                <img
+                    src="{{ results.pairplot }}"
+                    alt="Feature Pairplot"
+                    class="eda-chart"
+                >
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        {% endif %}
+
+        {% endif %}
+
+
+
+        <!-- ================================================= -->
+        <!-- PREPROCESSING -->
+        <!-- ================================================= -->
+
+        {% if active == 'preprocessing' %}
+
+        <h2>Data Preprocessing</h2>
+
+        <p>
+            Prepare the placement dataset for machine learning
+            model training.
+        </p>
+
+
+        {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+        {% endif %}
+
+
+        {% if summary %}
+
+
+        <!-- SUMMARY -->
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+                <h3>Target</h3>
+                <p>{{ summary.target }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Features</h3>
+                <p>{{ summary.feature_count }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Missing Values</h3>
+                <p>{{ summary.missing_total }}</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Duplicate Rows</h3>
+                <p>{{ summary.duplicate_rows }}</p>
+            </div>
+
+        </div>
+
+
+
+        <!-- SCALING -->
+
+        <div class="process-card">
+
+            <h3>Numerical Feature Scaling</h3>
+
+            <p>
+                Select a scaling technique for numerical features.
+            </p>
+
+
+            <form
+                method="POST"
+                action="{{ url_for('preprocessing_page') }}"
+            >
+
+                <div class="form-group">
+
+                    <label for="scaling_method">
+                        Scaling Method
+                    </label>
+
+
+                    <select
+                        id="scaling_method"
+                        name="scaling_method"
+                    >
+
+                        <option
+                            value="standard"
+                            {% if scaling_method == 'standard' %}selected{% endif %}
+                        >
+                            StandardScaler
+                        </option>
+
+
+                        <option
+                            value="minmax"
+                            {% if scaling_method == 'minmax' %}selected{% endif %}
+                        >
+                            MinMaxScaler
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Apply Scaling
+                </button>
+
+            </form>
+
+
+            <div class="scaling-info">
+
+                {% if summary.scaling_method == 'standard' %}
+
+                <h4>StandardScaler</h4>
+
+                <p>
+                    StandardScaler transforms numerical features
+                    so that they have approximately zero mean and
+                    unit standard deviation.
+                </p>
+
+                <p class="formula">
+                    z = (x - μ) / σ
+                </p>
+
+                {% else %}
+
+                <h4>MinMaxScaler</h4>
+
+                <p>
+                    MinMaxScaler transforms numerical features
+                    into a fixed range, normally between 0 and 1.
+                </p>
+
+                <p class="formula">
+                    x' = (x - xmin) / (xmax - xmin)
+                </p>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+
+        <!-- NUMERICAL FEATURES -->
+
+        <div class="process-card">
+
+            <h3>Numerical Features</h3>
+
+            <p>
+                Numerical features are processed using median
+                imputation followed by the selected scaling method.
+            </p>
+
+
+            <div class="feature-tags">
+
+                {% for feature in summary.numeric_features %}
+
+                <span class="feature-tag">
+                    {{ feature }}
+                </span>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+
+        <!-- CATEGORICAL FEATURES -->
+
+        <div class="process-card">
+
+            <h3>Categorical Features</h3>
+
+            <p>
+                Missing categorical values are replaced using
+                the most frequent value and then encoded using
+                OneHotEncoder.
+            </p>
+
+
+            <div class="feature-tags">
+
+                {% for feature in summary.categorical_features %}
+
+                <span class="feature-tag">
+                    {{ feature }}
+                </span>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+
+        <!-- TRAIN TEST SPLIT -->
+
+        <div class="process-card">
+
+            <h3>Train / Test Split</h3>
+
+
+            <div class="split-grid">
+
+                <div class="split-card">
+
+                    <h4>Training Data</h4>
+
+                    <p>
+                        {{ summary.train_size }}
+                    </p>
+
+                    <span>
+                        80%
+                    </span>
+
+                </div>
+
+
+                <div class="split-card">
+
+                    <h4>Testing Data</h4>
+
+                    <p>
+                        {{ summary.test_size }}
+                    </p>
+
+                    <span>
+                        20%
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- PIPELINE -->
+
+        <div class="process-card">
+
+            <h3>Preprocessing Pipeline</h3>
+
+
+            <div class="process-step">
+
+                <strong>
+                    1. Feature / Target Separation
+                </strong>
+
+                <p>
+                    PlacementStatus is separated as the target
+                    variable.
+                </p>
+
+            </div>
+
+
+            <div class="process-step">
+
+                <strong>
+                    2. Feature Type Identification
+                </strong>
+
+                <p>
+                    Features are separated into numerical and
+                    categorical features.
+                </p>
+
+            </div>
+
+
+            <div class="process-step">
+
+                <strong>
+                    3. Missing Value Handling
+                </strong>
+
+                <p>
+                    Numerical missing values are handled using
+                    median imputation. Categorical missing values
+                    are handled using the most frequent value.
+                </p>
+
+            </div>
+
+
+            <div class="process-step">
+
+                <strong>
+                    4. Numerical Feature Scaling
+                </strong>
+
+                <p>
+                    Numerical features are scaled using either
+                    StandardScaler or MinMaxScaler.
+                </p>
+
+            </div>
+
+
+            <div class="process-step">
+
+                <strong>
+                    5. Categorical Encoding
+                </strong>
+
+                <p>
+                    Categorical features are converted into
+                    numerical representation using OneHotEncoder.
+                </p>
+
+            </div>
+
+
+            <div class="process-step">
+
+                <strong>
+                    6. Train / Test Split
+                </strong>
+
+                <p>
+                    The dataset is divided into 80% training data
+                    and 20% testing data using stratification.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- TARGET DISTRIBUTION -->
+
+        <div class="process-card">
+
+            <h3>Target Distribution</h3>
+
+
+            <table class="data-table">
+
+                <thead>
+
+                <tr>
+                    <th>Placement Status</th>
+                    <th>Count</th>
+                </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for status, count in summary.target_distribution.items() %}
+
+                <tr>
+                    <td>{{ status }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        {% endif %}
+
+        {% endif %}
+
+
     </main>
+
 </div>
 
 </body>
+
 </html>
