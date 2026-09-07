@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request
 
-import pandas as pd
-
 from load_data import (
     load_data,
     get_data_summary
@@ -19,10 +17,12 @@ from logistic_regression import (
     run_logistic_regression
 )
 
+from tree_based import (
+    run_tree_algorithm,
+    create_confusion_matrix_plot,
+    create_roc_curve_plot
+)
 
-# ============================================================
-# FLASK APPLICATION
-# ============================================================
 
 app = Flask(__name__)
 
@@ -52,15 +52,7 @@ def data_loading():
 
     try:
 
-        # ----------------------------------------------------
-        # Load original dataset
-        # ----------------------------------------------------
-
         df = load_data()
-
-        # ----------------------------------------------------
-        # Generate data loading summary
-        # ----------------------------------------------------
 
         summary = get_data_summary(df)
 
@@ -81,7 +73,7 @@ def data_loading():
 
 
 # ============================================================
-# EXPLORATORY DATA ANALYSIS
+# EDA
 # ============================================================
 
 @app.route("/eda")
@@ -92,17 +84,7 @@ def eda_page():
 
     try:
 
-        # ----------------------------------------------------
-        # Run EDA
-        # ----------------------------------------------------
-
         results = run_eda()
-
-        # ----------------------------------------------------
-        # Print results for debugging
-        # ----------------------------------------------------
-
-        print(results)
 
     except FileNotFoundError as e:
 
@@ -121,7 +103,7 @@ def eda_page():
 
 
 # ============================================================
-# DATA PREPROCESSING
+# PREPROCESSING
 # ============================================================
 
 @app.route(
@@ -131,18 +113,9 @@ def eda_page():
 def preprocessing_page():
 
     error = None
-
     preprocessing_result = None
 
-    # --------------------------------------------------------
-    # Default scaling method
-    # --------------------------------------------------------
-
     scaling_method = "standard"
-
-    # ========================================================
-    # GET SELECTED SCALING METHOD
-    # ========================================================
 
     if request.method == "POST":
 
@@ -153,76 +126,93 @@ def preprocessing_page():
 
     try:
 
-        # ====================================================
-        # LOAD ORIGINAL DATASET
-        # ====================================================
-
-        df = load_data()
-
-        # ====================================================
+        # ----------------------------------------------------
         # RUN PREPROCESSING
-        # ====================================================
+        # ----------------------------------------------------
 
         preprocessing_result = preprocess_data(
             scaling_method=scaling_method
         )
 
-        # ====================================================
-        # MAKE SURE RESULT IS A DICTIONARY
-        # ====================================================
-
-        if preprocessing_result is None:
-
-            preprocessing_result = {}
-
-        # ====================================================
-        # BASIC DATASET INFORMATION
-        # ====================================================
 
         # ----------------------------------------------------
-        # Target
+        # LOAD ORIGINAL DATA
         # ----------------------------------------------------
 
-        preprocessing_result["target"] = "PlacementStatus"
+        df = load_data()
+
 
         # ----------------------------------------------------
-        # Number of features
-        #
-        # Total columns - target column
+        # BUILD DISPLAY INFORMATION
         # ----------------------------------------------------
 
-        preprocessing_result["feature_count"] = int(
-            len(df.columns) - 1
+        target_column = "PlacementStatus"
+
+
+        # Features BEFORE target separation
+        feature_columns = [
+            column
+            for column in df.columns
+            if column != target_column
+        ]
+
+
+        # ----------------------------------------------------
+        # NUMERICAL FEATURES
+        # ----------------------------------------------------
+
+        numeric_features = df[
+            feature_columns
+        ].select_dtypes(
+            include=["int64", "float64"]
+        ).columns.tolist()
+
+
+        # ----------------------------------------------------
+        # CATEGORICAL FEATURES
+        # ----------------------------------------------------
+
+        categorical_features = df[
+            feature_columns
+        ].select_dtypes(
+            include=["object", "category"]
+        ).columns.tolist()
+
+
+        # ----------------------------------------------------
+        # MISSING VALUES
+        # ----------------------------------------------------
+
+        missing_total = int(
+            df[feature_columns]
+            .isnull()
+            .sum()
+            .sum()
         )
 
-        # ----------------------------------------------------
-        # Total missing values
-        # ----------------------------------------------------
-
-        preprocessing_result["missing_total"] = int(
-            df.isnull().sum().sum()
-        )
 
         # ----------------------------------------------------
-        # Duplicate rows
+        # DUPLICATE ROWS
         # ----------------------------------------------------
 
-        preprocessing_result["duplicate_rows"] = int(
+        duplicate_rows = int(
             df.duplicated().sum()
         )
 
-        # ====================================================
+
+        # ----------------------------------------------------
         # TARGET DISTRIBUTION
-        # ====================================================
+        # ----------------------------------------------------
 
         target_distribution = (
-            df["PlacementStatus"]
+            df[target_column]
             .value_counts()
             .sort_index()
             .to_dict()
         )
 
-        preprocessing_result["target_distribution"] = {
+
+        target_distribution = {
 
             str(status): int(count)
 
@@ -231,127 +221,75 @@ def preprocessing_page():
 
         }
 
-        # ====================================================
-        # SCALING METHOD
-        # ====================================================
+
+        # ----------------------------------------------------
+        # TRAIN / TEST SIZE
+        # ----------------------------------------------------
+
+        total_rows = len(df)
+
+        train_size = int(
+            total_rows * 0.80
+        )
+
+        test_size = (
+            total_rows - train_size
+        )
+
+
+        # ----------------------------------------------------
+        # ENSURE RESULT DICTIONARY EXISTS
+        # ----------------------------------------------------
+
+        if preprocessing_result is None:
+
+            preprocessing_result = {}
+
+
+        # ----------------------------------------------------
+        # ADD ALL DISPLAY VALUES
+        # ----------------------------------------------------
+
+        preprocessing_result["target"] = (
+            target_column
+        )
+
+        preprocessing_result["feature_count"] = (
+            len(feature_columns)
+        )
+
+        preprocessing_result["missing_total"] = (
+            missing_total
+        )
+
+        preprocessing_result["duplicate_rows"] = (
+            duplicate_rows
+        )
 
         preprocessing_result["scaling_method"] = (
             scaling_method
         )
 
-        # ====================================================
-        # NUMERICAL FEATURES
-        # ====================================================
-
-        if not preprocessing_result.get(
-            "numeric_features"
-        ):
-
-            numeric_features = (
-                df.drop(
-                    columns=["PlacementStatus"],
-                    errors="ignore"
-                )
-                .select_dtypes(
-                    include=["number"]
-                )
-                .columns
-                .tolist()
-            )
-
-            preprocessing_result[
-                "numeric_features"
-            ] = numeric_features
-
-        # ====================================================
-        # CATEGORICAL FEATURES
-        # ====================================================
-
-        if not preprocessing_result.get(
-            "categorical_features"
-        ):
-
-            categorical_features = (
-                df.drop(
-                    columns=["PlacementStatus"],
-                    errors="ignore"
-                )
-                .select_dtypes(
-                    exclude=["number"]
-                )
-                .columns
-                .tolist()
-            )
-
-            preprocessing_result[
-                "categorical_features"
-            ] = categorical_features
-
-        # ====================================================
-        # TRAIN / TEST SIZE
-        # ====================================================
-
-        if "train_size" not in preprocessing_result:
-
-            preprocessing_result[
-                "train_size"
-            ] = int(len(df) * 0.80)
-
-        if "test_size" not in preprocessing_result:
-
-            preprocessing_result[
-                "test_size"
-            ] = int(len(df) * 0.20)
-
-        # ====================================================
-        # DEBUG INFORMATION
-        # ====================================================
-
-        print()
-        print("=" * 70)
-        print("PLACEMENT PROJECT - PREPROCESSING")
-        print("=" * 70)
-
-        print()
-        print("Target:")
-        print(
-            preprocessing_result["target"]
+        preprocessing_result["numeric_features"] = (
+            numeric_features
         )
 
-        print()
-        print("Number of features:")
-        print(
-            preprocessing_result["feature_count"]
+        preprocessing_result["categorical_features"] = (
+            categorical_features
         )
 
-        print()
-        print("Total missing values:")
-        print(
-            preprocessing_result["missing_total"]
+        preprocessing_result["train_size"] = (
+            train_size
         )
 
-        print()
-        print("Duplicate rows:")
-        print(
-            preprocessing_result["duplicate_rows"]
+        preprocessing_result["test_size"] = (
+            test_size
         )
 
-        print()
-        print("Scaling method:")
-        print(
-            preprocessing_result["scaling_method"]
+        preprocessing_result["target_distribution"] = (
+            target_distribution
         )
 
-        print()
-        print("Target distribution:")
-        print(
-            preprocessing_result[
-                "target_distribution"
-            ]
-        )
-
-        print()
-        print("=" * 70)
 
     except FileNotFoundError as e:
 
@@ -361,9 +299,6 @@ def preprocessing_page():
 
         error = f"Unexpected error: {e}"
 
-    # ========================================================
-    # RENDER PREPROCESSING PAGE
-    # ========================================================
 
     return render_template(
         "index.html",
@@ -382,14 +317,9 @@ def preprocessing_page():
 def linear_regression_page():
 
     error = None
-
     result = None
 
     try:
-
-        # ----------------------------------------------------
-        # Run Linear Regression
-        # ----------------------------------------------------
 
         result = run_linear_regression()
 
@@ -417,14 +347,9 @@ def linear_regression_page():
 def logistic_regression_page():
 
     error = None
-
     result = None
 
     try:
-
-        # ----------------------------------------------------
-        # Run Logistic Regression
-        # ----------------------------------------------------
 
         result = run_logistic_regression()
 
@@ -440,6 +365,108 @@ def logistic_regression_page():
         "logistic_regression.html",
         active="logistic-regression",
         logistic_regression_result=result,
+        error=error
+    )
+
+
+# ============================================================
+# TREE BASED MODELS
+# ============================================================
+
+@app.route(
+    "/tree-based",
+    methods=["GET", "POST"]
+)
+def tree_based_page():
+
+    error = None
+    result = None
+
+    selected_algorithm = "decision_tree"
+
+
+    if request.method == "POST":
+
+        selected_algorithm = request.form.get(
+            "algorithm",
+            "decision_tree"
+        )
+
+        try:
+
+            # ------------------------------------------------
+            # RUN SELECTED ALGORITHM
+            # ------------------------------------------------
+
+            result = run_tree_algorithm(
+                selected_algorithm
+            )
+
+
+            # ------------------------------------------------
+            # CONFUSION MATRIX
+            # ------------------------------------------------
+
+            confusion_filename = (
+                f"{selected_algorithm}"
+                "_confusion_matrix.png"
+            )
+
+
+            create_confusion_matrix_plot(
+                result,
+                confusion_filename
+            )
+
+
+            # ------------------------------------------------
+            # ROC CURVE
+            # ------------------------------------------------
+
+            roc_filename = (
+                f"{selected_algorithm}"
+                "_roc_curve.png"
+            )
+
+
+            create_roc_curve_plot(
+                result,
+                roc_filename
+            )
+
+
+            # ------------------------------------------------
+            # STORE PLOT FILENAMES
+            # ------------------------------------------------
+
+            result[
+                "confusion_matrix_plot"
+            ] = confusion_filename
+
+
+            result[
+                "roc_curve_plot"
+            ] = roc_filename
+
+
+        except FileNotFoundError as e:
+
+            error = str(e)
+
+        except ImportError as e:
+
+            error = str(e)
+
+        except Exception as e:
+
+            error = f"Unexpected error: {e}"
+
+
+    return render_template(
+        "tree_based.html",
+        active="tree-based",
+        selected_algorithm=selected_algorithm,
+        result=result,
         error=error
     )
 
