@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Placement - Logistic Regression
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}?v=20"
+    >
+
+    <style>
+
+        .logistic-page {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .approach-card {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #dfe6ef;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(30, 55, 80, 0.05);
+            box-sizing: border-box;
+        }
+
+        .approach-card h2 {
+            color: #244b75;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .approach-card p {
+            color: #5c6d82;
+            margin-bottom: 18px;
+        }
+
+        .approach-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .approach-control label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #294866;
+        }
+
+        .approach-select {
+            width: 360px;
+            height: 48px;
+            padding: 0 15px;
+            border: 1px solid #aebfd2;
+            border-radius: 7px;
+            background: white;
+            color: #253b57;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .selection-section {
+            display: none;
+        }
+
+        .selection-section.show {
+            display: block;
+        }
+
+        .logistic-summary {
+            display: grid;
+            grid-template-columns:
+                repeat(4, minmax(0, 1fr));
+            gap: 18px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .logistic-page .section-card {
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 24px;
+        }
+
+        .logistic-page .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .logistic-page .data-table {
+            width: 100%;
+            min-width: 700px;
+        }
+
+        .logistic-plot-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        .logistic-plot-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding: 18px;
+            background: #f8fafc;
+            border: 1px solid #dfe6ef;
+            border-radius: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .logistic-plot-card h4 {
+            color: #294866;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .logistic-plot-card img {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .comparison-plot {
+            width: 100%;
+            padding: 20px;
+            background: #f8fafc;
+            border: 1px solid #dfe6ef;
+            border-radius: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .comparison-plot img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 1100px) {
+
+            .logistic-summary {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+            .logistic-plot-grid {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+        }
+
+        @media (max-width: 800px) {
+
+            .logistic-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .logistic-plot-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .approach-control {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .approach-select {
+                width: 100%;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- TOP BAR -->
+
+<div class="topbar">
+
+    <h1>
+        Placement Prediction Project
+    </h1>
+
+    <p>
+        Student Placement Analysis and Prediction
+    </p>
+
+</div>
+
+
+<div class="layout">
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <ul>
+
+            <li>
+                <a href="/" class="menu-item">
+                    🏠 Home
+                </a>
+            </li>
+
+            <li>
+                <a href="/data-loading" class="menu-item">
+                    📂 Data Loading
+                </a>
+            </li>
+
+            <li>
+                <a href="/eda" class="menu-item">
+                    📊 EDA
+                </a>
+            </li>
+
+            <li>
+                <a href="/preprocessing" class="menu-item">
+                    ⚙️ Preprocessing
+                </a>
+            </li>
+
+            <li>
+                <a
+                    href="/linear-regression"
+                    class="menu-item"
+                >
+                    📈 Linear Regression
+                </a>
+            </li>
+
+            <li>
+                <a
+                    href="/logistic-regression"
+                    class="menu-item active"
+                >
+                    🔢 Logistic Regression
+                </a>
+            </li>
+
+        </ul>
+
+    </aside>
+
+
+    <!-- MAIN -->
+
+    <main class="content logistic-page">
+
+
+        <h1>
+            Logistic Regression
+        </h1>
+
+
+        <p>
+
+            Logistic Regression for predicting
+            the PlacementStatus variable.
+
+        </p>
+
+
+        {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+        {% endif %}
+
+
+        {% if logistic_regression_result is not none %}
+
+
+        <!-- SUMMARY -->
+
+        <div class="logistic-summary">
+
+
+            <div class="card">
+
+                <h3>
+                    Dataset Rows
+                </h3>
+
+                <p>
+                    {{ logistic_regression_result.dataset_shape[0] }}
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    Features
+                </h3>
+
+                <p>
+                    {{ logistic_regression_result.training_shape[1] }}
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    Training Records
+                </h3>
+
+                <p>
+                    {{ logistic_regression_result.training_shape[0] }}
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    Testing Records
+                </h3>
+
+                <p>
+                    {{ logistic_regression_result.testing_shape[0] }}
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- APPROACH -->
+
+        <div class="approach-card">
+
+            <h2>
+                Select Logistic Regression Approach
+            </h2>
+
+            <p>
+
+                Choose whether to view Logistic Regression
+                without regularization, with regularization,
+                or compare all models.
+
+            </p>
+
+
+            <div class="approach-control">
+
+                <label for="logisticApproach">
+                    Approach:
+                </label>
+
+
+                <select
+                    id="logisticApproach"
+                    class="approach-select"
+                    onchange="changeLogisticApproach()"
+                >
+
+                    <option value="without">
+                        Without Regularization
+                    </option>
+
+                    <option value="with">
+                        With Regularization
+                    </option>
+
+                    <option value="all">
+                        Compare All
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             WITHOUT
+             ==================================================== -->
+
+        <div
+            id="logisticWithout"
+            class="selection-section show"
+        >
+
+            <div class="section-card">
+
+                <h2>
+                    Without Regularization
+                </h2>
+
+                <p>
+                    Logistic Regression without an
+                    L1 or L2 regularization penalty.
+                </p>
+
+
+                <div class="table-wrapper">
+
+                    <table class="data-table">
+
+                        <thead>
+
+                        <tr>
+
+                            <th>Model</th>
+
+                            <th>Accuracy</th>
+
+                            <th>Precision</th>
+
+                            <th>Recall</th>
+
+                            <th>F1 Score</th>
+
+                            <th>ROC AUC</th>
+
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        {% for row in
+                           logistic_regression_result.comparison %}
+
+                            {% if row["Category"] ==
+                                  "Without Regularization" %}
+
+                            <tr>
+
+                                <td>
+                                    {{ row["Model"] }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["Accuracy"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["Precision"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["Recall"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["F1 Score"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["ROC AUC"]) }}
+                                </td>
+
+                            </tr>
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <div class="section-card">
+
+                <h2>
+                    Confusion Matrix and ROC Curve
+                </h2>
+
+
+                <div class="logistic-plot-grid">
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Logistic Regression
+                            — Confusion Matrix
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/logistic_regression_confusion_matrix.png'
+                            ) }}?v=20"
+                            alt="Logistic Confusion Matrix"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Logistic Regression
+                            — ROC Curve
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/logistic_regression_roc_curve.png'
+                            ) }}?v=20"
+                            alt="Logistic ROC Curve"
+                        >
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             WITH
+             ==================================================== -->
+
+        <div
+            id="logisticWith"
+            class="selection-section"
+        >
+
+            <div class="section-card">
+
+                <h2>
+                    With Regularization
+                </h2>
+
+                <p>
+                    Regularized Logistic Regression using
+                    L2 and L1 penalties.
+                </p>
+
+
+                <div class="table-wrapper">
+
+                    <table class="data-table">
+
+                        <thead>
+
+                        <tr>
+
+                            <th>Model</th>
+
+                            <th>Regularization</th>
+
+                            <th>Accuracy</th>
+
+                            <th>Precision</th>
+
+                            <th>Recall</th>
+
+                            <th>F1 Score</th>
+
+                            <th>ROC AUC</th>
+
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        {% for row in
+                           logistic_regression_result.comparison %}
+
+                            {% if row["Category"] ==
+                                  "With Regularization" %}
+
+                            <tr>
+
+                                <td>
+                                    {{ row["Model"] }}
+                                </td>
+
+                                <td>
+
+                                    {% if "Ridge" in row["Model"] %}
+                                        L2
+                                    {% else %}
+                                        L1
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["Accuracy"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["Precision"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["Recall"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["F1 Score"]) }}
+                                </td>
+
+                                <td>
+                                    {{ "%.6f"|format(row["ROC AUC"]) }}
+                                </td>
+
+                            </tr>
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <div class="section-card">
+
+                <h2>
+                    Regularized Models
+                </h2>
+
+
+                <div class="logistic-plot-grid">
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Ridge Logistic Regression
+                            — L2
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/ridge_logistic_confusion_matrix.png'
+                            ) }}?v=20"
+                            alt="Ridge Confusion Matrix"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Lasso Logistic Regression
+                            — L1
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/lasso_logistic_confusion_matrix.png'
+                            ) }}?v=20"
+                            alt="Lasso Confusion Matrix"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Ridge Logistic Regression
+                            — ROC
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/ridge_logistic_roc_curve.png'
+                            ) }}?v=20"
+                            alt="Ridge ROC"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Lasso Logistic Regression
+                            — ROC
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/lasso_logistic_roc_curve.png'
+                            ) }}?v=20"
+                            alt="Lasso ROC"
+                        >
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             ALL
+             ==================================================== -->
+
+        <div
+            id="logisticAll"
+            class="selection-section"
+        >
+
+            <div class="section-card">
+
+                <h2>
+                    Complete Model Comparison
+                </h2>
+
+
+                <div class="table-wrapper">
+
+                    <table class="data-table">
+
+                        <thead>
+
+                        <tr>
+
+                            <th>Category</th>
+
+                            <th>Model</th>
+
+                            <th>Accuracy</th>
+
+                            <th>Precision</th>
+
+                            <th>Recall</th>
+
+                            <th>F1 Score</th>
+
+                            <th>ROC AUC</th>
+
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        {% for row in
+                           logistic_regression_result.comparison %}
+
+                        <tr>
+
+                            <td>
+                                {{ row["Category"] }}
+                            </td>
+
+                            <td>
+                                {{ row["Model"] }}
+                            </td>
+
+                            <td>
+                                {{ "%.6f"|format(row["Accuracy"]) }}
+                            </td>
+
+                            <td>
+                                {{ "%.6f"|format(row["Precision"]) }}
+                            </td>
+
+                            <td>
+                                {{ "%.6f"|format(row["Recall"]) }}
+                            </td>
+
+                            <td>
+                                {{ "%.6f"|format(row["F1 Score"]) }}
+                            </td>
+
+                            <td>
+                                {{ "%.6f"|format(row["ROC AUC"]) }}
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <div class="section-card">
+
+                <h2>
+                    Model Comparison
+                </h2>
+
+
+                <div class="comparison-plot">
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='plots/logistic_regression_comparison.png'
+                        ) }}?v=20"
+                        alt="Logistic Regression Comparison"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="section-card">
+
+                <h2>
+                    Confusion Matrices and ROC Curves
+                </h2>
+
+
+                <div class="logistic-plot-grid">
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Logistic Regression
+                            — Confusion Matrix
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/logistic_regression_confusion_matrix.png'
+                            ) }}?v=20"
+                            alt="Logistic CM"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Ridge Logistic
+                            — Confusion Matrix
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/ridge_logistic_confusion_matrix.png'
+                            ) }}?v=20"
+                            alt="Ridge CM"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Lasso Logistic
+                            — Confusion Matrix
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/lasso_logistic_confusion_matrix.png'
+                            ) }}?v=20"
+                            alt="Lasso CM"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Logistic Regression
+                            — ROC
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/logistic_regression_roc_curve.png'
+                            ) }}?v=20"
+                            alt="Logistic ROC"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Ridge Logistic
+                            — ROC
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/ridge_logistic_roc_curve.png'
+                            ) }}?v=20"
+                            alt="Ridge ROC"
+                        >
+
+                    </div>
+
+
+                    <div class="logistic-plot-card">
+
+                        <h4>
+                            Lasso Logistic
+                            — ROC
+                        </h4>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='plots/lasso_logistic_roc_curve.png'
+                            ) }}?v=20"
+                            alt="Lasso ROC"
+                        >
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        {% endif %}
+
+
+    </main>
+
+</div>
+
+
+<script>
+
+function changeLogisticApproach() {
+
+    const value =
+        document.getElementById(
+            "logisticApproach"
+        ).value;
+
+    const withoutSection =
+        document.getElementById(
+            "logisticWithout"
+        );
+
+    const withSection =
+        document.getElementById(
+            "logisticWith"
+        );
+
+    const allSection =
+        document.getElementById(
+            "logisticAll"
+        );
+
+
+    withoutSection.classList.remove(
+        "show"
+    );
+
+    withSection.classList.remove(
+        "show"
+    );
+
+    allSection.classList.remove(
+        "show"
+    );
+
+
+    if (value === "without") {
+
+        withoutSection.classList.add(
+            "show"
+        );
+
+    }
+
+    else if (value === "with") {
+
+        withSection.classList.add(
+            "show"
+        );
+
+    }
+
+    else if (value === "all") {
+
+        allSection.classList.add(
+            "show"
+        );
+
+    }
+
+}
+
+</script>
+
+
+</body>
+
+</html>

@@ -1,16 +1,13 @@
 import os
-
 import pandas as pd
+import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import (
-    OneHotEncoder,
     StandardScaler,
-    MinMaxScaler
+    MinMaxScaler,
+    OneHotEncoder
 )
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
 
 
 # ============================================================
@@ -19,399 +16,289 @@ from sklearn.pipeline import Pipeline
 
 DATA_PATH = r"placement_predict_50k Dataset (3)(in).csv"
 
-PREPROCESSED_PATH = "preprocessed.csv"
+PREPROCESSED_PATH = r"preprocessed.csv"
 
-TARGET = "PlacementStatus"
+TARGET_COLUMN = "PlacementStatus"
 
 
 # ============================================================
-# CREATE ONE-HOT ENCODER
+# LOAD DATA
 # ============================================================
 
-def create_one_hot_encoder():
-    """
-    Create OneHotEncoder while supporting both newer
-    and older versions of scikit-learn.
-    """
+def load_dataset():
 
-    try:
+    if not os.path.exists(DATA_PATH):
 
-        return OneHotEncoder(
-            handle_unknown="ignore",
-            sparse_output=False
+        raise FileNotFoundError(
+            f"Dataset not found: {DATA_PATH}"
         )
 
-    except TypeError:
-
-        return OneHotEncoder(
-            handle_unknown="ignore",
-            sparse=False
-        )
+    return pd.read_csv(DATA_PATH)
 
 
 # ============================================================
 # CREATE SCALER
 # ============================================================
 
-def create_scaler(scaling_method="standard"):
-    """
-    Return the scaler selected by the user.
+def create_scaler(method="standard"):
 
-    standard -> StandardScaler
-    minmax   -> MinMaxScaler
-    """
-
-    scaling_method = scaling_method.lower()
-
-    if scaling_method == "minmax":
+    if method == "minmax":
 
         return MinMaxScaler()
 
-    elif scaling_method == "standard":
-
-        return StandardScaler()
-
-    else:
-
-        raise ValueError(
-            "Invalid scaling method. "
-            "Use 'standard' or 'minmax'."
-        )
+    return StandardScaler()
 
 
 # ============================================================
-# PREPARE DATA
+# PREPROCESS DATA
 # ============================================================
 
-def prepare_data(
-    df: pd.DataFrame,
-    scaling_method="standard"
-):
-    """
-    Separate features and target and create the
-    preprocessing transformer.
-    """
+def preprocess_data(scaling_method="standard"):
 
-    if TARGET not in df.columns:
+    df = load_dataset()
+
+    if TARGET_COLUMN not in df.columns:
 
         raise ValueError(
-            f"Target column '{TARGET}' "
-            f"not found in dataset"
+            f"Target column '{TARGET_COLUMN}' not found in dataset."
         )
 
-    data = df.copy()
-
     # --------------------------------------------------------
-    # Separate features and target
+    # Separate target and features
     # --------------------------------------------------------
 
-    X = data.drop(
-        columns=[TARGET]
-    )
+    X = df.drop(columns=[TARGET_COLUMN])
 
-    y = data[TARGET]
+    y = df[TARGET_COLUMN]
 
     # --------------------------------------------------------
     # Identify numerical and categorical columns
     # --------------------------------------------------------
 
-    numeric_cols = (
-        X.select_dtypes(
-            include=["number"]
-        )
-        .columns
-        .tolist()
-    )
+    numerical_columns = X.select_dtypes(
+        include=["int64", "float64"]
+    ).columns.tolist()
 
-    categorical_cols = (
-        X.select_dtypes(
-            exclude=["number"]
-        )
-        .columns
-        .tolist()
-    )
+    categorical_columns = X.select_dtypes(
+        include=["object", "category", "bool"]
+    ).columns.tolist()
 
     # --------------------------------------------------------
-    # Numerical preprocessing
-    #
-    # 1. Fill missing values with median
-    # 2. Apply selected scaling method
+    # Handle missing numerical values
     # --------------------------------------------------------
 
-    numeric_pipeline = Pipeline([
-        (
-            "imputer",
-            SimpleImputer(
-                strategy="median"
+    if numerical_columns:
+
+        X[numerical_columns] = X[numerical_columns].fillna(
+            X[numerical_columns].median()
+        )
+
+    # --------------------------------------------------------
+    # Handle missing categorical values
+    # --------------------------------------------------------
+
+    for column in categorical_columns:
+
+        if X[column].isnull().any():
+
+            X[column] = X[column].fillna(
+                X[column].mode()[0]
             )
-        ),
-        (
-            "scaler",
-            create_scaler(
-                scaling_method
+
+    # --------------------------------------------------------
+    # Encode categorical variables
+    # --------------------------------------------------------
+
+    if categorical_columns:
+
+        try:
+
+            encoder = OneHotEncoder(
+                handle_unknown="ignore",
+                sparse_output=False
             )
-        )
-    ])
 
-    # --------------------------------------------------------
-    # Categorical preprocessing
-    #
-    # 1. Fill missing values with most frequent value
-    # 2. Convert categories to numerical columns
-    # --------------------------------------------------------
+        except TypeError:
 
-    categorical_pipeline = Pipeline([
-        (
-            "imputer",
-            SimpleImputer(
-                strategy="most_frequent"
+            encoder = OneHotEncoder(
+                handle_unknown="ignore",
+                sparse=False
             )
-        ),
-        (
-            "onehot",
-            create_one_hot_encoder()
+
+        encoded_array = encoder.fit_transform(
+            X[categorical_columns]
         )
-    ])
 
-    # --------------------------------------------------------
-    # Combine numerical and categorical preprocessing
-    # --------------------------------------------------------
-
-    transformer = ColumnTransformer([
-        (
-            "numeric",
-            numeric_pipeline,
-            numeric_cols
-        ),
-        (
-            "categorical",
-            categorical_pipeline,
-            categorical_cols
+        encoded_columns = encoder.get_feature_names_out(
+            categorical_columns
         )
-    ])
 
-    return (
-        X,
-        y,
-        transformer,
-        numeric_cols,
-        categorical_cols
-    )
+        encoded_df = pd.DataFrame(
+            encoded_array,
+            columns=encoded_columns,
+            index=X.index
+        )
 
+        X = X.drop(
+            columns=categorical_columns
+        )
 
-# ============================================================
-# SPLIT DATA
-# ============================================================
-
-def split_data(
-    df: pd.DataFrame,
-    scaling_method="standard",
-    test_size=0.2,
-    random_state=42
-):
-    """
-    Split data into training and testing sets.
-
-    The transformer is returned so that model-training
-    modules can fit preprocessing only on the training data.
-    """
-
-    (
-        X,
-        y,
-        transformer,
-        numeric_cols,
-        categorical_cols
-    ) = prepare_data(
-        df,
-        scaling_method
-    )
-
-    # --------------------------------------------------------
-    # Train / Test split
-    # --------------------------------------------------------
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=test_size,
-        random_state=random_state,
-        stratify=y
-    )
-
-    return {
-        "X_train": X_train,
-        "X_test": X_test,
-        "y_train": y_train,
-        "y_test": y_test,
-        "transformer": transformer,
-        "numeric_cols": numeric_cols,
-        "categorical_cols": categorical_cols
-    }
-
-
-# ============================================================
-# GENERATE PREPROCESSED DATASET
-# ============================================================
-
-def generate_preprocessed_csv(
-    scaling_method="standard",
-    input_path=DATA_PATH,
-    output_path=PREPROCESSED_PATH
-):
-    """
-    Read the original dataset, perform preprocessing,
-    and save the transformed dataset as preprocessed.csv.
-
-    This function is intended for creating the complete
-    preprocessed dataset for inspection/export.
-    """
-
-    # --------------------------------------------------------
-    # Check input file
-    # --------------------------------------------------------
-
-    if not os.path.exists(input_path):
-
-        raise FileNotFoundError(
-            f"Dataset not found: {input_path}"
+        X = pd.concat(
+            [X, encoded_df],
+            axis=1
         )
 
     # --------------------------------------------------------
-    # Load original dataset
+    # Scale numerical features
     # --------------------------------------------------------
 
-    df = pd.read_csv(
-        input_path
-    )
+    if numerical_columns:
+
+        scaler = create_scaler(
+            scaling_method
+        )
+
+        X[numerical_columns] = scaler.fit_transform(
+            X[numerical_columns]
+        )
 
     # --------------------------------------------------------
-    # Prepare data
+    # Encode target
     # --------------------------------------------------------
 
-    (
-        X,
-        y,
-        transformer,
-        numeric_cols,
-        categorical_cols
-    ) = prepare_data(
-        df,
-        scaling_method
-    )
+    if y.dtype == "object" or str(y.dtype) == "category":
+
+        unique_values = y.dropna().unique()
+
+        if len(unique_values) == 2:
+
+            # Convert binary target to 0/1
+            mapping = {
+                unique_values[0]: 0,
+                unique_values[1]: 1
+            }
+
+            y = y.map(mapping)
+
+        else:
+
+            y = pd.factorize(y)[0]
 
     # --------------------------------------------------------
-    # Fit transformer and transform features
+    # Combine processed features + target
     # --------------------------------------------------------
 
-    X_processed = transformer.fit_transform(
-        X
-    )
+    processed_df = X.copy()
 
-    # --------------------------------------------------------
-    # Get transformed feature names
-    # --------------------------------------------------------
-
-    feature_names = (
-        transformer.get_feature_names_out()
-    )
-
-    # --------------------------------------------------------
-    # Convert transformed data to DataFrame
-    # --------------------------------------------------------
-
-    processed_df = pd.DataFrame(
-        X_processed,
-        columns=feature_names,
-        index=df.index
-    )
-
-    # --------------------------------------------------------
-    # Add target column back
-    # --------------------------------------------------------
-
-    processed_df[TARGET] = y.values
+    processed_df[TARGET_COLUMN] = y.values
 
     # --------------------------------------------------------
     # Save preprocessed dataset
     # --------------------------------------------------------
 
     processed_df.to_csv(
-        output_path,
+        PREPROCESSED_PATH,
         index=False
     )
 
     # --------------------------------------------------------
-    # Return useful information
+    # Return information to Flask
     # --------------------------------------------------------
 
     return {
-        "output_path": output_path,
-        "original_rows": int(df.shape[0]),
-        "original_columns": int(df.shape[1]),
-        "processed_rows": int(processed_df.shape[0]),
-        "processed_columns": int(processed_df.shape[1]),
+        "original_shape": df.shape,
+
+        "processed_shape": processed_df.shape,
+
+        "target_column": TARGET_COLUMN,
+
+        "numerical_features": numerical_columns,
+
+        "categorical_features": categorical_columns,
+
+        "total_features_after_encoding": X.shape[1],
+
         "scaling_method": scaling_method,
-        "numeric_features": numeric_cols,
-        "categorical_features": categorical_cols,
-        "processed_features": list(
-            processed_df.columns
+
+        "output_file": PREPROCESSED_PATH,
+
+        "missing_values_before": int(
+            df.isnull().sum().sum()
+        ),
+
+        "missing_values_after": int(
+            processed_df.isnull().sum().sum()
+        ),
+
+        "preview": processed_df.head(10).to_dict(
+            orient="records"
         )
     }
+
+
+# ============================================================
+# TRAIN / TEST SPLIT
+# ============================================================
+
+def split_data(test_size=0.20, random_state=42):
+
+    if not os.path.exists(PREPROCESSED_PATH):
+
+        preprocess_data()
+
+    df = pd.read_csv(
+        PREPROCESSED_PATH
+    )
+
+    X = df.drop(
+        columns=[TARGET_COLUMN]
+    )
+
+    y = df[TARGET_COLUMN]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+
+        X,
+
+        y,
+
+        test_size=test_size,
+
+        random_state=random_state,
+
+        stratify=y
+    )
+
+    return (
+        X_train,
+        X_test,
+        y_train,
+        y_test
+    )
 
 
 # ============================================================
 # PREPROCESSING SUMMARY
 # ============================================================
 
-def get_preprocessing_summary(
-    df: pd.DataFrame,
-    scaling_method="standard"
-):
-    """
-    Return preprocessing information for the Flask UI.
-    """
+def get_preprocessing_summary():
 
-    (
-        X,
-        y,
-        transformer,
-        numeric_cols,
-        categorical_cols
-    ) = prepare_data(
-        df,
-        scaling_method
-    )
+    df = load_dataset()
+
+    processed_df = preprocess_data()
 
     return {
-        "target": TARGET,
+        "original_rows": df.shape[0],
 
-        "feature_count": int(
-            X.shape[1]
-        ),
+        "original_columns": df.shape[1],
 
-        "numeric_features": numeric_cols,
+        "processed_rows": processed_df["processed_shape"][0],
 
-        "categorical_features": categorical_cols,
+        "processed_columns": processed_df["processed_shape"][1],
 
-        "target_distribution": {
-            str(key): int(value)
-            for key, value in (
-                y.value_counts()
-                .sort_index()
-                .items()
-            )
-        },
+        "target": TARGET_COLUMN,
 
-        "duplicate_rows": int(
-            df.duplicated().sum()
-        ),
-
-        "missing_total": int(
-            df.isnull().sum().sum()
-        ),
-
-        "scaling_method": scaling_method
+        "output_file": PREPROCESSED_PATH
     }
 
 
@@ -421,94 +308,21 @@ def get_preprocessing_summary(
 
 if __name__ == "__main__":
 
-    print()
-    print("=" * 60)
-    print("PLACEMENT DATA PREPROCESSING")
-    print("=" * 60)
+    result = preprocess_data()
 
-    # --------------------------------------------------------
-    # Choose scaling method
-    # --------------------------------------------------------
-    #
-    # Change this to:
-    #
-    # "standard"
-    #
-    # or:
-    #
-    # "minmax"
-    #
-    # --------------------------------------------------------
+    print("\nPreprocessing completed successfully.")
 
-    scaling_method = "standard"
-
-    print()
     print(
-        f"Scaling method: {scaling_method}"
+        "Original shape:",
+        result["original_shape"]
     )
 
-    print()
     print(
-        "Reading original dataset..."
+        "Processed shape:",
+        result["processed_shape"]
     )
 
-    try:
-
-        result = generate_preprocessed_csv(
-            scaling_method=scaling_method
-        )
-
-        print()
-        print(
-            "Preprocessing completed successfully."
-        )
-
-        print()
-        print(
-            f"Original rows: "
-            f"{result['original_rows']}"
-        )
-
-        print(
-            f"Original columns: "
-            f"{result['original_columns']}"
-        )
-
-        print(
-            f"Processed rows: "
-            f"{result['processed_rows']}"
-        )
-
-        print(
-            f"Processed columns: "
-            f"{result['processed_columns']}"
-        )
-
-        print()
-        print(
-            f"Scaling method: "
-            f"{result['scaling_method']}"
-        )
-
-        print()
-        print(
-            f"Created file: "
-            f"{result['output_path']}"
-        )
-
-        print()
-        print("=" * 60)
-
-    except Exception as e:
-
-        print()
-        print(
-            "Preprocessing failed."
-        )
-
-        print(
-            f"Error: {e}"
-        )
-
-        print()
-        print("=" * 60)
+    print(
+        "Preprocessed file:",
+        result["output_file"]
+    )
